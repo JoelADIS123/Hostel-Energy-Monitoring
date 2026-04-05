@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hostel Energy Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #eef2f7;
+    color: #222;
+  }
+
+  .navbar {
+    background: #1f2937;
+    color: white;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .navbar .nav-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .navbar button {
+    background: #374151;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+
+  .navbar button:hover {
+    background: #4b5563;
+  }
+
+  .container {
+    padding: 18px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+
+  .section-title {
+    margin: 0 0 12px 0;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .controls input,
+  .controls select,
+  .controls button {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: white;
+  }
+
+  .controls button {
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+    border: none;
+  }
+
+  .controls button:hover {
+    background: #1d4ed8;
+  }
+
+  .muted {
+    color: #6b7280;
+    font-size: 13px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .summary-box {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .summary-box h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #475569;
+  }
+
+  .summary-box .value {
+    font-size: 22px;
+    font-weight: bold;
+  }
+
+  .subsection-title {
+    margin: 18px 0 10px 0;
+    font-size: 16px;
+    color: #1f2937;
+  }
+
+  .info-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 8px 0 10px 0;
+    font-size: 13px;
+    color: #475569;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 6px 10px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 999px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+
+  th, td {
+    border: 1px solid #d1d5db;
+    padding: 7px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  th {
+    background: #1e3a8a;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    max-height: 540px;
+    overflow-y: auto;
+  }
+
+  .HIGH {
+    color: #dc2626;
+    font-weight: bold;
+  }
+
+  .LOW {
+    color: #d97706;
+    font-weight: bold;
+  }
+
+  .NORMAL {
+    color: #15803d;
+    font-weight: bold;
+  }
+
+  .UNUSUAL {
+    color: #7c3aed;
+    font-weight: bold;
+  }
+
+  .risk-high {
+    color: #dc2626;
+    font-weight: bold;
+  }
+
+  .risk-mid {
+    color: #d97706;
+    font-weight: bold;
+  }
+
+  .risk-low {
+    color: #15803d;
+    font-weight: bold;
+  }
+
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 18px;
+    margin-top: 16px;
+  }
+
+  .chart-card {
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .insight-box {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  #suggestTable td:last-child {
+    text-align: left;
+    min-width: 320px;
+  }
+
+  .legend-line {
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div><strong>Hostel Energy Dashboard (kWh)</strong></div>
+  <div class="nav-buttons">
+    <button onclick="showSection('dashboardSection')">Dashboard</button>
+    <button onclick="showSection('alertsSection')">Alerts</button>
+    <button onclick="showSection('logsSection')">Logs</button>
+    <button onclick="showSection('billingSection')">Billing</button>
+    <button onclick="showSection('mlSection')">Advanced ML</button>
+    <button onclick="showSection('thresholdSection')">Thresholds</button>
+    <button onclick="showSection('suggestionsSection')">Suggestions</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <div id="dashboardSection" class="card">
+    <h3 class="section-title">Dashboard</h3>
+
+    <div class="controls">
+      <button onclick="loadAllData()">Load Data</button>
+      <button id="autoRefreshBtn" onclick="toggleAutoRefresh()">Auto Refresh OFF</button>
+
+      <label>Room Filter</label>
+      <select id="roomFilter" onchange="reloadVisibleSections()"></select>
+
+      <span class="muted">All values shown in kWh. Cost is based on ₹8 per kWh.</span>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-box">
+        <h4>Total Rooms Visible</h4>
+        <div class="value" id="summaryRooms">0</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Energy Visible</h4>
+        <div class="value" id="summaryEnergy">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Cost Visible</h4>
+        <div class="value" id="summaryCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Active Alerts</h4>
+        <div class="value" id="summaryActiveAlerts">0</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Records Since Beginning</h4>
+        <div class="value" id="summaryTotalRecords">0</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Ever Cost Since Beginning</h4>
+        <div class="value" id="summaryTotalEverCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Past 1 Hour Cost</h4>
+        <div class="value" id="summaryPast1hCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Past 24 Hours Cost</h4>
+        <div class="value" id="summaryPast24hCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Past 1 Month Cost</h4>
+        <div class="value" id="summaryPastMonthCost">₹ 0.00</div>
+      </div>
+    </div>
+
+    <div class="info-strip">
+      <span class="badge">Dashboard table records: <strong id="dashboardTableCount">0</strong></span>
+      <span class="badge">Historical records used for summary: <strong id="dashboardHistoryCount">0</strong></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="dashboardTable"></table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <canvas id="energyPerRoomChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <canvas id="costPerRoomChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="alertsSection" class="card hidden">
+    <h3 class="section-title">Active Alerts</h3>
+
+    <div class="controls">
+      <button onclick="loadAlerts()">Load Alerts</button>
+      <button onclick="acknowledgeAllAlerts()">Acknowledge All Active Alerts</button>
+      <button onclick="downloadAcknowledgedAlertsCSV()">Download Acknowledged Alerts CSV</button>
+      <span class="muted">Shows high-usage appliances and extra unknown appliances per room.</span>
+    </div>
+
+    <div class="info-strip">
+      <span class="badge">Active alert records: <strong id="alertsTableCount">0</strong></span>
+      <span class="badge">Acknowledged alert records: <strong id="alertHistoryTableCount">0</strong></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="alertsTable"></table>
+    </div>
+
+    <h4>Acknowledged Alerts History</h4>
+    <div class="table-wrap">
+      <table id="alertHistoryTable"></table>
+    </div>
+  </div>
+
+  <div id="logsSection" class="card hidden">
+    <h3 class="section-title">Logs</h3>
+
+    <div class="controls">
+      <button onclick="loadLogs()">Load Logs</button>
+      <button onclick="downloadCSV()">Download CSV</button>
+
+      <label>Sort Logs</label>
+      <select id="logsSort" onchange="sortLogsAndRender()">
+        <option value="time_desc">Newest</option>
+        <option value="time_asc">Oldest</option>
+        <option value="room">Room</option>
+        <option value="power_high">High Usage</option>
+        <option value="power_low">Low Usage</option>
+      </select>
+
+      <span class="muted">Logs show all appliance usage, thresholds at that time, statuses, total usage, and timestamp.</span>
+    </div>
+
+    <div class="info-strip">
+      <span class="badge">Log records: <strong id="logsTableCount">0</strong></span>
+      <span class="badge">Total logged cost: <strong id="logsTotalCost">₹ 0.00</strong></span>
+      <span class="badge">Total logged energy: <strong id="logsTotalEnergy">0.000 kWh</strong></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="logsTable"></table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <canvas id="costOverTimeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="billingSection" class="card hidden">
+    <h3 class="section-title">Billing</h3>
+
+    <div class="controls">
+      <label>Billing Window</label>
+      <select id="billingWindow">
+        <option value="all">Entire History</option>
+        <option value="1h">Past 1 Hour</option>
+        <option value="24h">Past 24 Hours</option>
+        <option value="month">Past 1 Month</option>
+        <option value="custom">Custom Hours</option>
+      </select>
+
+      <label>Custom Hours</label>
+      <input id="billingCustomHours" type="number" min="1" step="1" value="6">
+
+      <button onclick="loadBilling()">Load Billing</button>
+      <button onclick="downloadPDF()">Download PDF</button>
+      <button onclick="emailReport()">Send via Email</button>
+
+      <span class="muted">Billing loads instantly when you click Load Billing. Custom Hours applies when Billing Window = Custom Hours.</span>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-box">
+        <h4>Billing Records In Window</h4>
+        <div class="value" id="billingRecordCount">0</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Usage In Window</h4>
+        <div class="value" id="billingTotalUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Cost In Window</h4>
+        <div class="value" id="billingTotalCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Ever Usage</h4>
+        <div class="value" id="billingTotalEverUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Total Ever Cost</h4>
+        <div class="value" id="billingTotalEverCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Past 1 Hour Cost</h4>
+        <div class="value" id="billingPast1hCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Past 24 Hours Cost</h4>
+        <div class="value" id="billingPast24hCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Past 1 Month Cost</h4>
+        <div class="value" id="billingPastMonthCost">₹ 0.00</div>
+      </div>
+      <div class="summary-box">
+        <h4>Selected Timeline</h4>
+        <div class="value" id="billingWindowLabel">Entire History</div>
+      </div>
+    </div>
+
+    <h4 class="subsection-title">Appliance Totals In Selected Timeline</h4>
+    <div class="summary-grid">
+      <div class="summary-box">
+        <h4>Fan Usage</h4>
+        <div class="value" id="billingFanUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>AC Usage</h4>
+        <div class="value" id="billingAcUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Laptop Usage</h4>
+        <div class="value" id="billingLaptopUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Tube Light Usage</h4>
+        <div class="value" id="billingTubeUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Mobile Charger Usage</h4>
+        <div class="value" id="billingMobileUsage">0.000 kWh</div>
+      </div>
+      <div class="summary-box">
+        <h4>Extra Appliance Usage</h4>
+        <div class="value" id="billingExtraUsage">0.000 kWh</div>
+      </div>
+    </div>
+
+    <div class="info-strip">
+      <span class="badge">Billing table records: <strong id="billingTableCount">0</strong></span>
+      <span class="badge">Window selected: <strong id="billingWindowInfo">Entire History</strong></span>
+    </div>
+
+    <h4 class="subsection-title">Room-wise Total Billing</h4>
+    <div class="table-wrap">
+      <table id="billingTable"></table>
+    </div>
+
+    <h4 class="subsection-title">Room-wise Appliance Billing Breakdown</h4>
+    <div class="table-wrap">
+      <table id="billingApplianceTable"></table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <canvas id="billingDistributionChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <canvas id="billingTrendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="mlSection" class="card hidden">
+    <h3 class="section-title">Advanced ML Forecasting</h3>
+
+    <div class="controls">
+      <label>Budget 1h (₹)</label>
+      <input id="budget1h" type="number" value="50">
+
+      <label>Budget 24h (₹)</label>
+      <input id="budget24h" type="number" value="1000">
+
+      <button onclick="loadAdvancedML()">Run Advanced ML</button>
+
+      <span class="muted">Uses your existing backend models: linear regression fallback, Holt trend smoothing, and Gaussian exceedance probabilities.</span>
+    </div>
+
+    <div id="mlInsightsContainer"></div>
+
+    <div class="table-wrap">
+      <table id="mlTable"></table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <canvas id="mlPredictionChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="thresholdSection" class="card hidden">
+    <h3 class="section-title">Update Thresholds (kWh)</h3>
+
+    <div class="controls">
+      <label>Fan</label><input id="fan" type="number" step="0.001">
+      <label>AC</label><input id="ac" type="number" step="0.001">
+      <label>Laptop</label><input id="laptop" type="number" step="0.001">
+      <label>Tube Light</label><input id="tube_light" type="number" step="0.001">
+      <label>Mobile Charger</label><input id="mobile_charger" type="number" step="0.001">
+      <button onclick="updateThresholds()">Update Thresholds</button>
+    </div>
+
+    <div class="muted">
+      These thresholds are stored in DynamoDB and used by both record generation and frontend alerting.
+    </div>
+  </div>
+
+  <div id="suggestionsSection" class="card hidden">
+    <h3 class="section-title">Optimization Suggestions</h3>
+
+    <div class="controls">
+      <button onclick="loadSuggestions()">Generate Suggestions</button>
+      <span class="muted">Suggestions are driven by current values, thresholds, ML predictions, and exceedance probabilities.</span>
+    </div>
+
+    <div class="insight-box" id="suggestionsLegendBox">
+      <strong>Legend for % values</strong>
+      <div class="legend-line"><b>Risk 1h %</b> = estimated probability that the appliance will exceed its threshold in the next 1 hour.</div>
+      <div class="legend-line"><b>0% to 40%</b> = low risk, currently safer trend.</div>
+      <div class="legend-line"><b>40% to 70%</b> = medium risk, monitor closely.</div>
+      <div class="legend-line"><b>70% to 100%</b> = high risk, likely to exceed threshold soon.</div>
+      <div class="legend-line"><b>P&gt;Th 1h / P&gt;Th 24h</b> in Advanced ML = probability of crossing appliance threshold.</div>
+      <div class="legend-line"><b>P&gt;Budget 1h / P&gt;Budget 24h</b> = probability that room cost exceeds the budget you entered.</div>
+      <div class="legend-line"><b>Budget Use %</b> = predicted cost divided by budget.</div>
+      <div class="legend-line"><b>Budget Left</b> = budget minus predicted cost.</div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="suggestTable"></table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = "https://er0kp3tdq3.execute-api.eu-north-1.amazonaws.com/HostelEnergy";
+const COST_PER_KWH = 8;
+
+let latestData = [];
+let logsData = [];
+let billingData = [];
+let thresholds = {};
+let advancedMLData = [];
+let activeAlertsData = [];
+let alertHistoryData = [];
+let allHistoricalLogs = [];
+
+let autoRefreshOn = false;
+let autoRefreshTimer = null;
+
+let energyPerRoomChart = null;
+let costPerRoomChart = null;
+let costOverTimeChart = null;
+let billingDistributionChart = null;
+let billingTrendChart = null;
+let mlPredictionChart = null;
+
+function showSection(id) {
+  [
+    "dashboardSection",
+    "alertsSection",
+    "logsSection",
+    "billingSection",
+    "mlSection",
+    "thresholdSection",
+    "suggestionsSection"
+  ].forEach(x => document.getElementById(x).classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+
+function num(v) {
+  return Number(v || 0);
+}
+
+function formatKwh(v) {
+  return `${num(v).toFixed(3)} kWh`;
+}
+
+function formatRs(v) {
+  return `₹ ${num(v).toFixed(2)}`;
+}
+
+function formatProb(p) {
+  const value = num(p) * 100;
+  if (value === 0) return "0.000%";
+  if (value < 0.001) return "<0.001%";
+  return `${value.toFixed(3)}%`;
+}
+
+function applyRoomFilter(data) {
+  const roomEl = document.getElementById("roomFilter");
+  const room = roomEl ? roomEl.value : "all";
+  return room === "all" ? data : data.filter(x => x.room_id === room);
+}
+
+function populateRoomFilter(data) {
+  const sel = document.getElementById("roomFilter");
+  const current = sel.value || "all";
+  const rooms = [...new Set(data.map(x => x.room_id))].sort();
+
+  sel.innerHTML = `<option value="all">All</option>`;
+  rooms.forEach(r => {
+    sel.innerHTML += `<option value="${r}">${r}</option>`;
+  });
+
+  if (rooms.includes(current)) sel.value = current;
+  else sel.value = "all";
+}
+
+function riskClass(p) {
+  if (p > 0.7) return "risk-high";
+  if (p > 0.4) return "risk-mid";
+  return "risk-low";
+}
+
+function parseTimestamp(ts) {
+  if (!ts) return null;
+
+  let d = new Date(ts);
+  if (!isNaN(d)) return d;
+
+  const normalized = String(ts).replace(" ", "T");
+  d = new Date(normalized);
+  if (!isNaN(d)) return d;
+
+  d = new Date(normalized + "Z");
+  if (!isNaN(d)) return d;
+
+  return null;
+}
+
+function getReferenceNowFromData(data) {
+  const validDates = data
+    .map(x => parseTimestamp(x.timestamp))
+    .filter(Boolean)
+    .map(d => d.getTime());
+
+  if (!validDates.length) return new Date();
+  return new Date(Math.max(...validDates));
+}
+
+function filterByDuration(data, ms) {
+  const refNow = getReferenceNowFromData(data);
+  return data.filter(x => {
+    const t = parseTimestamp(x.timestamp);
+    return t && (refNow - t) <= ms;
+  });
+}
+
+function getWindowLabel(mode, customHours = 0) {
+  if (mode === "1h") return "Past 1 Hour";
+  if (mode === "24h") return "Past 24 Hours";
+  if (mode === "month") return "Past 1 Month";
+  if (mode === "custom") return `Past ${customHours} Hours`;
+  return "Entire History";
+}
+
+function applyBillingWindow(data, mode, customHours = 0) {
+  if (mode === "1h") return filterByDuration(data, 3600000);
+  if (mode === "24h") return filterByDuration(data, 86400000);
+  if (mode === "month") return filterByDuration(data, 30 * 86400000);
+  if (mode === "custom") return filterByDuration(data, Number(customHours || 0) * 3600000);
+  return [...data];
+}
+
+function computeDatasetTotals(data) {
+  return data.reduce((acc, x) => {
+    acc.records += 1;
+    acc.total += num(x.total_watt);
+    acc.fan += num(x.fan_watt);
+    acc.ac += num(x.ac_watt);
+    acc.laptop += num(x.laptop_watt);
+    acc.tube += num(x.tube_light_watt);
+    acc.mobile += num(x.mobile_charger_watt);
+    acc.extra += num(x.extra_appliance_watt);
+    return acc;
+  }, {
+    records: 0,
+    total: 0,
+    fan: 0,
+    ac: 0,
+    laptop: 0,
+    tube: 0,
+    mobile: 0,
+    extra: 0
+  });
+}
+
+function downloadArrayAsCSV(filename, headers, rows) {
+  const csvRows = [headers.join(",")];
+  rows.forEach(row => {
+    csvRows.push(row.map(value => {
+      const str = String(value ?? "");
+      const escaped = str.replace(/"/g, '""');
+      return `"${escaped}"`;
+    }).join(","));
+  });
+
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+async function loadThresholds() {
+  const res = await fetch(API + "/get_thresholds");
+  thresholds = await res.json();
+
+  ["fan", "ac", "laptop", "tube_light", "mobile_charger"].forEach(k => {
+    const el = document.getElementById(k);
+    if (el) el.value = thresholds[k] ?? "";
+  });
+}
+
+async function loadHistoricalLogsForMetrics() {
+  const res = await fetch(API + "/get_all_logs");
+  const raw = await res.json();
+  allHistoricalLogs = applyRoomFilter(raw);
+  return allHistoricalLogs;
+}
+
+async function loadAllData() {
+  await loadThresholds();
+
+  const [roomRes] = await Promise.all([
+    fetch(API + "/get_room_usage"),
+    loadHistoricalLogsForMetrics()
+  ]);
+
+  latestData = await roomRes.json();
+  populateRoomFilter(latestData);
+
+  await loadHistoricalLogsForMetrics();
+
+  const filtered = applyRoomFilter(latestData);
+  renderDashboard(filtered);
+  renderDashboardCharts(filtered);
+  renderDashboardSummary(filtered);
+
+  await loadAlertsSummaryOnly();
+}
+
+function renderDashboardSummary(data) {
+  const totalEnergy = data.reduce((a, b) => a + num(b.total_watt), 0);
+  const totalCost = totalEnergy * COST_PER_KWH;
+
+  const histTotals = computeDatasetTotals(allHistoricalLogs);
+  const past1h = computeDatasetTotals(filterByDuration(allHistoricalLogs, 3600000));
+  const past24h = computeDatasetTotals(filterByDuration(allHistoricalLogs, 86400000));
+  const pastMonth = computeDatasetTotals(filterByDuration(allHistoricalLogs, 30 * 86400000));
+
+  document.getElementById("summaryRooms").innerText = data.length;
+  document.getElementById("summaryEnergy").innerText = formatKwh(totalEnergy);
+  document.getElementById("summaryCost").innerText = formatRs(totalCost);
+
+  document.getElementById("summaryTotalRecords").innerText = histTotals.records;
+  document.getElementById("summaryTotalEverCost").innerText = formatRs(histTotals.total * COST_PER_KWH);
+  document.getElementById("summaryPast1hCost").innerText = formatRs(past1h.total * COST_PER_KWH);
+  document.getElementById("summaryPast24hCost").innerText = formatRs(past24h.total * COST_PER_KWH);
+  document.getElementById("summaryPastMonthCost").innerText = formatRs(pastMonth.total * COST_PER_KWH);
+
+  document.getElementById("dashboardTableCount").innerText = data.length;
+  document.getElementById("dashboardHistoryCount").innerText = histTotals.records;
+}
+
+async function loadAlertsSummaryOnly() {
+  const res = await fetch(API + "/get_active_alerts");
+  const alerts = await res.json();
+  activeAlertsData = applyRoomFilter(alerts);
+  document.getElementById("summaryActiveAlerts").innerText = activeAlertsData.length;
+}
+
+function renderDashboard(data) {
+  let html = `
+    <tr>
+      <th>Room</th>
+
+      <th>Fan (kWh)</th>
+      <th>Fan Th (kWh)</th>
+      <th>Fan Status</th>
+
+      <th>AC (kWh)</th>
+      <th>AC Th (kWh)</th>
+      <th>AC Status</th>
+
+      <th>Laptop (kWh)</th>
+      <th>Laptop Th (kWh)</th>
+      <th>Laptop Status</th>
+
+      <th>Tube (kWh)</th>
+      <th>Tube Th (kWh)</th>
+      <th>Tube Status</th>
+
+      <th>Mobile (kWh)</th>
+      <th>Mobile Th (kWh)</th>
+      <th>Mobile Status</th>
+
+      <th>Total (kWh)</th>
+      <th>Cost (₹)</th>
+      <th>₹/kWh</th>
+      <th>Extra Appliance</th>
+    </tr>
+  `;
+
+  data.forEach(x => {
+    const cost = num(x.total_watt) * COST_PER_KWH;
+
+    html += `
+      <tr>
+        <td>${x.room_id}</td>
+
+        <td>${num(x.fan_watt).toFixed(3)}</td>
+        <td>${num(x.fan_threshold || thresholds.fan).toFixed(3)}</td>
+        <td class="${x.fan_status || 'NORMAL'}">${x.fan_status || 'NORMAL'}</td>
+
+        <td>${num(x.ac_watt).toFixed(3)}</td>
+        <td>${num(x.ac_threshold || thresholds.ac).toFixed(3)}</td>
+        <td class="${x.ac_status || 'NORMAL'}">${x.ac_status || 'NORMAL'}</td>
+
+        <td>${num(x.laptop_watt).toFixed(3)}</td>
+        <td>${num(x.laptop_threshold || thresholds.laptop).toFixed(3)}</td>
+        <td class="${x.laptop_status || 'NORMAL'}">${x.laptop_status || 'NORMAL'}</td>
+
+        <td>${num(x.tube_light_watt).toFixed(3)}</td>
+        <td>${num(x.tube_light_threshold || thresholds.tube_light).toFixed(3)}</td>
+        <td class="${x.tube_light_status || 'NORMAL'}">${x.tube_light_status || 'NORMAL'}</td>
+
+        <td>${num(x.mobile_charger_watt).toFixed(3)}</td>
+        <td>${num(x.mobile_charger_threshold || thresholds.mobile_charger).toFixed(3)}</td>
+        <td class="${x.mobile_charger_status || 'NORMAL'}">${x.mobile_charger_status || 'NORMAL'}</td>
+
+        <td>${num(x.total_watt).toFixed(3)}</td>
+        <td>₹ ${cost.toFixed(2)}</td>
+        <td>${COST_PER_KWH}</td>
+        <td>${num(x.extra_appliance_watt) ? `${num(x.extra_appliance_watt).toFixed(3)} kWh (${x.extra_appliance_status || "UNKNOWN"})` : "-"}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("dashboardTable").innerHTML = html;
+}
+
+function renderDashboardCharts(data) {
+  const labels = data.map(x => x.room_id);
+  const energies = data.map(x => num(x.total_watt));
+  const costs = energies.map(v => v * COST_PER_KWH);
+
+  if (energyPerRoomChart) energyPerRoomChart.destroy();
+  energyPerRoomChart = new Chart(document.getElementById("energyPerRoomChart"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "Energy Consumption per Room (kWh)", data: energies }]
+    },
+    options: {
+      plugins: { title: { display: true, text: "Room-wise Energy Usage" } },
+      scales: {
+        x: { title: { display: true, text: "Rooms" } },
+        y: { title: { display: true, text: "Energy (kWh)" } }
+      }
+    }
+  });
+
+  if (costPerRoomChart) costPerRoomChart.destroy();
+  costPerRoomChart = new Chart(document.getElementById("costPerRoomChart"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "Cost per Room (₹)", data: costs }]
+    },
+    options: {
+      plugins: { title: { display: true, text: "Room-wise Energy Cost" } },
+      scales: {
+        x: { title: { display: true, text: "Rooms" } },
+        y: { title: { display: true, text: "Cost (₹)" } }
+      }
+    }
+  });
+}
+
+async function loadAlerts() {
+  const [activeRes, historyRes] = await Promise.all([
+    fetch(API + "/get_active_alerts"),
+    fetch(API + "/get_alert_history")
+  ]);
+
+  activeAlertsData = applyRoomFilter(await activeRes.json());
+  alertHistoryData = applyRoomFilter(await historyRes.json());
+
+  renderActiveAlerts(activeAlertsData);
+  renderAlertHistory(alertHistoryData);
+  document.getElementById("summaryActiveAlerts").innerText = activeAlertsData.length;
+  document.getElementById("alertsTableCount").innerText = activeAlertsData.length;
+  document.getElementById("alertHistoryTableCount").innerText = alertHistoryData.length;
+}
+
+function renderActiveAlerts(data) {
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Appliance</th>
+      <th>Value (kWh)</th>
+      <th>Threshold (kWh)</th>
+      <th>Status</th>
+      <th>Message</th>
+      <th>Timestamp</th>
+    </tr>
+  `;
+
+  data.forEach(x => {
+    html += `
+      <tr>
+        <td>${x.room_id || "-"}</td>
+        <td>${x.appliance || "-"}</td>
+        <td>${num(x.value).toFixed(3)}</td>
+        <td>${num(x.threshold).toFixed(3)}</td>
+        <td class="${x.status || 'HIGH'}">${x.status || 'HIGH'}</td>
+        <td>${x.message || "-"}</td>
+        <td>${x.timestamp || "-"}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("alertsTable").innerHTML = html;
+}
+
+function renderAlertHistory(data) {
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Appliance</th>
+      <th>Value (kWh)</th>
+      <th>Threshold (kWh)</th>
+      <th>Status</th>
+      <th>Message</th>
+      <th>Timestamp</th>
+      <th>Acknowledged At</th>
+    </tr>
+  `;
+
+  data.forEach(x => {
+    html += `
+      <tr>
+        <td>${x.room_id || "-"}</td>
+        <td>${x.appliance || "-"}</td>
+        <td>${num(x.value).toFixed(3)}</td>
+        <td>${num(x.threshold).toFixed(3)}</td>
+        <td class="${x.status || 'HIGH'}">${x.status || 'HIGH'}</td>
+        <td>${x.message || "-"}</td>
+        <td>${x.timestamp || "-"}</td>
+        <td>${x.acknowledged_at || "-"}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("alertHistoryTable").innerHTML = html;
+}
+
+async function acknowledgeAllAlerts() {
+  await fetch(API + "/acknowledge_all_alerts", { method: "POST" });
+  await loadAlerts();
+  alert("All active alerts acknowledged");
+}
+
+function downloadAcknowledgedAlertsCSV() {
+  const headers = [
+    "Room",
+    "Appliance",
+    "Value(kWh)",
+    "Threshold(kWh)",
+    "Status",
+    "Message",
+    "Timestamp",
+    "AcknowledgedAt"
+  ];
+
+  const rows = alertHistoryData.map(x => [
+    x.room_id || "",
+    x.appliance || "",
+    num(x.value).toFixed(3),
+    num(x.threshold).toFixed(3),
+    x.status || "",
+    x.message || "",
+    x.timestamp || "",
+    x.acknowledged_at || ""
+  ]);
+
+  downloadArrayAsCSV("acknowledged_alerts.csv", headers, rows);
+}
+
+async function loadLogs() {
+  const res = await fetch(API + "/get_all_logs");
+  logsData = await res.json();
+  logsData = applyRoomFilter(logsData);
+  sortLogsAndRender();
+}
+
+function sortLogsAndRender() {
+  const mode = document.getElementById("logsSort").value;
+
+  if (mode === "time_desc") logsData.sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+  if (mode === "time_asc") logsData.sort((a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp));
+  if (mode === "room") logsData.sort((a, b) => (a.room_id || "").localeCompare(b.room_id || ""));
+  if (mode === "power_high") logsData.sort((a, b) => num(b.total_watt) - num(a.total_watt));
+  if (mode === "power_low") logsData.sort((a, b) => num(a.total_watt) - num(b.total_watt));
+
+  renderLogs(logsData);
+}
+
+function renderLogs(data) {
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Fan (kWh)</th><th>Fan Th (kWh)</th><th>Fan Status</th>
+      <th>AC (kWh)</th><th>AC Th (kWh)</th><th>AC Status</th>
+      <th>Laptop (kWh)</th><th>Laptop Th (kWh)</th><th>Laptop Status</th>
+      <th>Tube (kWh)</th><th>Tube Th (kWh)</th><th>Tube Status</th>
+      <th>Mobile (kWh)</th><th>Mobile Th (kWh)</th><th>Mobile Status</th>
+      <th>Total (kWh)</th>
+      <th>Timestamp</th>
+    </tr>
+  `;
+
+  data.forEach(x => {
+    html += `
+      <tr>
+        <td>${x.room_id || "-"}</td>
+
+        <td>${num(x.fan_watt).toFixed(3)}</td>
+        <td>${num(x.fan_threshold).toFixed(3)}</td>
+        <td class="${x.fan_status || 'NORMAL'}">${x.fan_status || 'NORMAL'}</td>
+
+        <td>${num(x.ac_watt).toFixed(3)}</td>
+        <td>${num(x.ac_threshold).toFixed(3)}</td>
+        <td class="${x.ac_status || 'NORMAL'}">${x.ac_status || 'NORMAL'}</td>
+
+        <td>${num(x.laptop_watt).toFixed(3)}</td>
+        <td>${num(x.laptop_threshold).toFixed(3)}</td>
+        <td class="${x.laptop_status || 'NORMAL'}">${x.laptop_status || 'NORMAL'}</td>
+
+        <td>${num(x.tube_light_watt).toFixed(3)}</td>
+        <td>${num(x.tube_light_threshold).toFixed(3)}</td>
+        <td class="${x.tube_light_status || 'NORMAL'}">${x.tube_light_status || 'NORMAL'}</td>
+
+        <td>${num(x.mobile_charger_watt).toFixed(3)}</td>
+        <td>${num(x.mobile_charger_threshold).toFixed(3)}</td>
+        <td class="${x.mobile_charger_status || 'NORMAL'}">${x.mobile_charger_status || 'NORMAL'}</td>
+
+        <td>${num(x.total_watt).toFixed(3)}</td>
+        <td>${x.timestamp || "-"}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("logsTable").innerHTML = html;
+
+  const totals = computeDatasetTotals(data);
+  document.getElementById("logsTableCount").innerText = totals.records;
+  document.getElementById("logsTotalCost").innerText = formatRs(totals.total * COST_PER_KWH);
+  document.getElementById("logsTotalEnergy").innerText = formatKwh(totals.total);
+
+  renderLogsChart(data);
+}
+
+function renderLogsChart(data) {
+  const sorted = [...data].sort((a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp));
+  const labels = sorted.map(x => x.timestamp);
+  const costSeries = sorted.map(x => num(x.total_watt) * COST_PER_KWH);
+
+  if (costOverTimeChart) costOverTimeChart.destroy();
+  costOverTimeChart = new Chart(document.getElementById("costOverTimeChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{ label: "Cost Over Time (₹)", data: costSeries }]
+    },
+    options: {
+      plugins: { title: { display: true, text: "Energy Cost Over Time" } },
+      scales: {
+        x: { title: { display: true, text: "Timestamp" } },
+        y: { title: { display: true, text: "Cost (₹)" } }
+      }
+    }
+  });
+}
+
+function downloadCSV() {
+  const rows = logsData.map(x => [
+    x.room_id || "",
+    x.fan_watt || 0, x.fan_threshold || 0, x.fan_status || "",
+    x.ac_watt || 0, x.ac_threshold || 0, x.ac_status || "",
+    x.laptop_watt || 0, x.laptop_threshold || 0, x.laptop_status || "",
+    x.tube_light_watt || 0, x.tube_light_threshold || 0, x.tube_light_status || "",
+    x.mobile_charger_watt || 0, x.mobile_charger_threshold || 0, x.mobile_charger_status || "",
+    x.total_watt || 0, x.timestamp || ""
+  ]);
+
+  downloadArrayAsCSV("logs.csv", [
+    "Room",
+    "Fan(kWh)","FanThreshold(kWh)","FanStatus",
+    "AC(kWh)","ACThreshold(kWh)","ACStatus",
+    "Laptop(kWh)","LaptopThreshold(kWh)","LaptopStatus",
+    "Tube(kWh)","TubeThreshold(kWh)","TubeStatus",
+    "Mobile(kWh)","MobileThreshold(kWh)","MobileStatus",
+    "Total(kWh)","Timestamp"
+  ], rows);
+}
+
+async function loadBilling() {
+  const res = await fetch(API + "/get_all_logs");
+  const raw = await res.json();
+  allHistoricalLogs = applyRoomFilter(raw);
+
+  const windowMode = document.getElementById("billingWindow").value;
+  const customHours = Number(document.getElementById("billingCustomHours").value || 0);
+  billingData = applyBillingWindow(allHistoricalLogs, windowMode, customHours);
+
+  renderBillingSummary(allHistoricalLogs, billingData, windowMode, customHours);
+  renderBilling(billingData);
+  renderBillingApplianceBreakdown(billingData);
+  renderBillingCharts(billingData);
+}
+
+function renderBillingSummary(allData, windowData, windowMode, customHours) {
+  const totalsAll = computeDatasetTotals(allData);
+  const totalsWindow = computeDatasetTotals(windowData);
+  const totals1h = computeDatasetTotals(applyBillingWindow(allData, "1h"));
+  const totals24h = computeDatasetTotals(applyBillingWindow(allData, "24h"));
+  const totalsMonth = computeDatasetTotals(applyBillingWindow(allData, "month"));
+
+  document.getElementById("billingRecordCount").innerText = totalsWindow.records;
+  document.getElementById("billingTotalUsage").innerText = formatKwh(totalsWindow.total);
+  document.getElementById("billingTotalCost").innerText = formatRs(totalsWindow.total * COST_PER_KWH);
+  document.getElementById("billingTotalEverUsage").innerText = formatKwh(totalsAll.total);
+  document.getElementById("billingTotalEverCost").innerText = formatRs(totalsAll.total * COST_PER_KWH);
+
+  document.getElementById("billingPast1hCost").innerText = formatRs(totals1h.total * COST_PER_KWH);
+  document.getElementById("billingPast24hCost").innerText = formatRs(totals24h.total * COST_PER_KWH);
+  document.getElementById("billingPastMonthCost").innerText = formatRs(totalsMonth.total * COST_PER_KWH);
+  document.getElementById("billingWindowLabel").innerText = getWindowLabel(windowMode, customHours);
+
+  document.getElementById("billingFanUsage").innerText = formatKwh(totalsWindow.fan);
+  document.getElementById("billingAcUsage").innerText = formatKwh(totalsWindow.ac);
+  document.getElementById("billingLaptopUsage").innerText = formatKwh(totalsWindow.laptop);
+  document.getElementById("billingTubeUsage").innerText = formatKwh(totalsWindow.tube);
+  document.getElementById("billingMobileUsage").innerText = formatKwh(totalsWindow.mobile);
+  document.getElementById("billingExtraUsage").innerText = formatKwh(totalsWindow.extra);
+
+  document.getElementById("billingTableCount").innerText = totalsWindow.records;
+  document.getElementById("billingWindowInfo").innerText = getWindowLabel(windowMode, customHours);
+}
+
+function renderBilling(data) {
+  const grouped = {};
+  data.forEach(x => {
+    if (!grouped[x.room_id]) {
+      grouped[x.room_id] = {
+        energy: 0,
+        records: 0
+      };
+    }
+    grouped[x.room_id].energy += num(x.total_watt);
+    grouped[x.room_id].records += 1;
+  });
+
+  let totalEnergy = 0;
+  let totalCost = 0;
+  let totalRecords = 0;
+
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Records</th>
+      <th>Total Energy (kWh)</th>
+      <th>Total Cost (₹)</th>
+    </tr>
+  `;
+
+  Object.keys(grouped).sort().forEach(room => {
+    const energy = grouped[room].energy;
+    const cost = energy * COST_PER_KWH;
+    const records = grouped[room].records;
+    totalEnergy += energy;
+    totalCost += cost;
+    totalRecords += records;
+
+    html += `
+      <tr>
+        <td>${room}</td>
+        <td>${records}</td>
+        <td>${energy.toFixed(3)}</td>
+        <td>₹ ${cost.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+    <tr>
+      <td><b>Total</b></td>
+      <td><b>${totalRecords}</b></td>
+      <td><b>${totalEnergy.toFixed(3)}</b></td>
+      <td><b>₹ ${totalCost.toFixed(2)}</b></td>
+    </tr>
+  `;
+
+  document.getElementById("billingTable").innerHTML = html;
+}
+
+function renderBillingApplianceBreakdown(data) {
+  const grouped = {};
+
+  data.forEach(x => {
+    if (!grouped[x.room_id]) {
+      grouped[x.room_id] = {
+        fan: 0,
+        ac: 0,
+        laptop: 0,
+        tube: 0,
+        mobile: 0,
+        extra: 0,
+        total: 0
+      };
+    }
+
+    grouped[x.room_id].fan += num(x.fan_watt);
+    grouped[x.room_id].ac += num(x.ac_watt);
+    grouped[x.room_id].laptop += num(x.laptop_watt);
+    grouped[x.room_id].tube += num(x.tube_light_watt);
+    grouped[x.room_id].mobile += num(x.mobile_charger_watt);
+    grouped[x.room_id].extra += num(x.extra_appliance_watt);
+    grouped[x.room_id].total += num(x.total_watt);
+  });
+
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Fan (kWh)</th>
+      <th>AC (kWh)</th>
+      <th>Laptop (kWh)</th>
+      <th>Tube Light (kWh)</th>
+      <th>Mobile Charger (kWh)</th>
+      <th>Extra Appliance (kWh)</th>
+      <th>Total (kWh)</th>
+      <th>Total Cost (₹)</th>
+    </tr>
+  `;
+
+  const grand = { fan: 0, ac: 0, laptop: 0, tube: 0, mobile: 0, extra: 0, total: 0 };
+
+  Object.keys(grouped).sort().forEach(room => {
+    const g = grouped[room];
+    grand.fan += g.fan;
+    grand.ac += g.ac;
+    grand.laptop += g.laptop;
+    grand.tube += g.tube;
+    grand.mobile += g.mobile;
+    grand.extra += g.extra;
+    grand.total += g.total;
+
+    html += `
+      <tr>
+        <td>${room}</td>
+        <td>${g.fan.toFixed(3)}</td>
+        <td>${g.ac.toFixed(3)}</td>
+        <td>${g.laptop.toFixed(3)}</td>
+        <td>${g.tube.toFixed(3)}</td>
+        <td>${g.mobile.toFixed(3)}</td>
+        <td>${g.extra.toFixed(3)}</td>
+        <td>${g.total.toFixed(3)}</td>
+        <td>₹ ${(g.total * COST_PER_KWH).toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+    <tr>
+      <td><b>Total</b></td>
+      <td><b>${grand.fan.toFixed(3)}</b></td>
+      <td><b>${grand.ac.toFixed(3)}</b></td>
+      <td><b>${grand.laptop.toFixed(3)}</b></td>
+      <td><b>${grand.tube.toFixed(3)}</b></td>
+      <td><b>${grand.mobile.toFixed(3)}</b></td>
+      <td><b>${grand.extra.toFixed(3)}</b></td>
+      <td><b>${grand.total.toFixed(3)}</b></td>
+      <td><b>₹ ${(grand.total * COST_PER_KWH).toFixed(2)}</b></td>
+    </tr>
+  `;
+
+  document.getElementById("billingApplianceTable").innerHTML = html;
+}
+
+function renderBillingCharts(data) {
+  const byRoom = {};
+  data.forEach(x => {
+    if (!byRoom[x.room_id]) byRoom[x.room_id] = 0;
+    byRoom[x.room_id] += num(x.total_watt) * COST_PER_KWH;
+  });
+
+  const pieLabels = Object.keys(byRoom).sort();
+  const pieValues = pieLabels.map(r => byRoom[r]);
+
+  if (billingDistributionChart) billingDistributionChart.destroy();
+  billingDistributionChart = new Chart(document.getElementById("billingDistributionChart"), {
+    type: "pie",
+    data: {
+      labels: pieLabels,
+      datasets: [{ label: "Cost Distribution", data: pieValues }]
+    },
+    options: {
+      plugins: { title: { display: true, text: "Cost Distribution Across Rooms" } }
+    }
+  });
+
+  const sortedTrend = [...data].sort((a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp));
+  const trendLabels = sortedTrend.map(x => x.timestamp);
+  const trendValues = sortedTrend.map(x => num(x.total_watt) * COST_PER_KWH);
+
+  if (billingTrendChart) billingTrendChart.destroy();
+  billingTrendChart = new Chart(document.getElementById("billingTrendChart"), {
+    type: "line",
+    data: {
+      labels: trendLabels,
+      datasets: [{ label: "Cost Trend (₹)", data: trendValues }]
+    },
+    options: {
+      plugins: { title: { display: true, text: "Billing Trend Over Time" } },
+      scales: {
+        x: { title: { display: true, text: "Time" } },
+        y: { title: { display: true, text: "Cost (₹)" } }
+      }
+    }
+  });
+}
+
+function pdfAddWrappedLine(doc, text, x, y, maxWidth, lineHeight) {
+  const lines = doc.splitTextToSize(text, maxWidth);
+  doc.text(lines, x, y);
+  return y + (lines.length * lineHeight);
+}
+
+function pdfEnsureSpace(doc, y, needed = 12) {
+  if (y > 280 - needed) {
+    doc.addPage();
+    return 18;
+  }
+  return y;
+}
+
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const windowMode = document.getElementById("billingWindow").value;
+  const customHours = Number(document.getElementById("billingCustomHours").value || 0);
+  const windowLabel = getWindowLabel(windowMode, customHours);
+  const allTotals = computeDatasetTotals(allHistoricalLogs);
+  const windowTotals = computeDatasetTotals(billingData);
+  const oneHourTotals = computeDatasetTotals(applyBillingWindow(allHistoricalLogs, "1h"));
+  const dayTotals = computeDatasetTotals(applyBillingWindow(allHistoricalLogs, "24h"));
+  const monthTotals = computeDatasetTotals(applyBillingWindow(allHistoricalLogs, "month"));
+
+  let y = 14;
+  doc.setFontSize(16);
+  doc.text("Hostel Energy Billing Report", 10, y);
+
+  y += 8;
+  doc.setFontSize(10);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 10, y);
+  y += 6;
+  doc.text(`Billing Window: ${windowLabel}`, 10, y);
+  y += 6;
+  doc.text(`Cost Rate: ₹${COST_PER_KWH} per kWh`, 10, y);
+
+  y += 10;
+  doc.setFontSize(13);
+  doc.text("Summary", 10, y);
+
+  y += 7;
+  doc.setFontSize(10);
+  const summaryLines = [
+    `Records in selected window: ${windowTotals.records}`,
+    `Total usage in selected window: ${windowTotals.total.toFixed(3)} kWh`,
+    `Total cost in selected window: ₹${(windowTotals.total * COST_PER_KWH).toFixed(2)}`,
+    `Total ever usage: ${allTotals.total.toFixed(3)} kWh`,
+    `Total ever cost: ₹${(allTotals.total * COST_PER_KWH).toFixed(2)}`,
+    `Past 1 hour cost: ₹${(oneHourTotals.total * COST_PER_KWH).toFixed(2)}`,
+    `Past 24 hours cost: ₹${(dayTotals.total * COST_PER_KWH).toFixed(2)}`,
+    `Past 1 month cost: ₹${(monthTotals.total * COST_PER_KWH).toFixed(2)}`
+  ];
+
+  summaryLines.forEach(line => {
+    y = pdfEnsureSpace(doc, y, 8);
+    doc.text(line, 12, y);
+    y += 6;
+  });
+
+  y += 4;
+  y = pdfEnsureSpace(doc, y, 40);
+  doc.setFontSize(13);
+  doc.text("Appliance Totals In Selected Window", 10, y);
+
+  y += 7;
+  doc.setFontSize(10);
+  const applianceLines = [
+    `Fan: ${windowTotals.fan.toFixed(3)} kWh`,
+    `AC: ${windowTotals.ac.toFixed(3)} kWh`,
+    `Laptop: ${windowTotals.laptop.toFixed(3)} kWh`,
+    `Tube Light: ${windowTotals.tube.toFixed(3)} kWh`,
+    `Mobile Charger: ${windowTotals.mobile.toFixed(3)} kWh`,
+    `Extra Appliance: ${windowTotals.extra.toFixed(3)} kWh`
+  ];
+
+  applianceLines.forEach(line => {
+    y = pdfEnsureSpace(doc, y, 8);
+    doc.text(line, 12, y);
+    y += 6;
+  });
+
+  y += 4;
+  y = pdfEnsureSpace(doc, y, 20);
+  doc.setFontSize(13);
+  doc.text("Room-wise Totals", 10, y);
+
+  const roomGrouped = {};
+  billingData.forEach(x => {
+    if (!roomGrouped[x.room_id]) {
+      roomGrouped[x.room_id] = { energy: 0, records: 0 };
+    }
+    roomGrouped[x.room_id].energy += num(x.total_watt);
+    roomGrouped[x.room_id].records += 1;
+  });
+
+  y += 7;
+  doc.setFontSize(10);
+  Object.keys(roomGrouped).sort().forEach(room => {
+    const g = roomGrouped[room];
+    const line = `${room} | records: ${g.records} | usage: ${g.energy.toFixed(3)} kWh | cost: ₹${(g.energy * COST_PER_KWH).toFixed(2)}`;
+    y = pdfEnsureSpace(doc, y, 8);
+    y = pdfAddWrappedLine(doc, line, 12, y, 185, 5);
+    y += 1;
+  });
+
+  y += 4;
+  y = pdfEnsureSpace(doc, y, 20);
+  doc.setFontSize(13);
+  doc.text("Room-wise Appliance Breakdown", 10, y);
+  y += 7;
+  doc.setFontSize(10);
+
+  const roomAppliance = {};
+  billingData.forEach(x => {
+    if (!roomAppliance[x.room_id]) {
+      roomAppliance[x.room_id] = { fan: 0, ac: 0, laptop: 0, tube: 0, mobile: 0, extra: 0, total: 0 };
+    }
+    roomAppliance[x.room_id].fan += num(x.fan_watt);
+    roomAppliance[x.room_id].ac += num(x.ac_watt);
+    roomAppliance[x.room_id].laptop += num(x.laptop_watt);
+    roomAppliance[x.room_id].tube += num(x.tube_light_watt);
+    roomAppliance[x.room_id].mobile += num(x.mobile_charger_watt);
+    roomAppliance[x.room_id].extra += num(x.extra_appliance_watt);
+    roomAppliance[x.room_id].total += num(x.total_watt);
+  });
+
+  Object.keys(roomAppliance).sort().forEach(room => {
+    const g = roomAppliance[room];
+    y = pdfEnsureSpace(doc, y, 24);
+    doc.text(`${room}`, 12, y);
+    y += 5;
+    doc.text(`Fan ${g.fan.toFixed(3)} | AC ${g.ac.toFixed(3)} | Laptop ${g.laptop.toFixed(3)}`, 16, y);
+    y += 5;
+    doc.text(`Tube ${g.tube.toFixed(3)} | Mobile ${g.mobile.toFixed(3)} | Extra ${g.extra.toFixed(3)}`, 16, y);
+    y += 5;
+    doc.text(`Total ${g.total.toFixed(3)} kWh | Cost ₹${(g.total * COST_PER_KWH).toFixed(2)}`, 16, y);
+    y += 6;
+  });
+
+  y += 2;
+  y = pdfEnsureSpace(doc, y, 20);
+  doc.setFontSize(13);
+  doc.text("Recent Billing Entries", 10, y);
+  y += 7;
+  doc.setFontSize(10);
+
+  const recentEntries = [...billingData]
+    .sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp))
+    .slice(0, 50);
+
+  recentEntries.forEach(x => {
+    const line = `${x.timestamp} | ${x.room_id} | total ${num(x.total_watt).toFixed(3)} kWh | cost ₹${(num(x.total_watt) * COST_PER_KWH).toFixed(2)} | fan ${num(x.fan_watt).toFixed(3)} | ac ${num(x.ac_watt).toFixed(3)} | laptop ${num(x.laptop_watt).toFixed(3)} | tube ${num(x.tube_light_watt).toFixed(3)} | mobile ${num(x.mobile_charger_watt).toFixed(3)} | extra ${num(x.extra_appliance_watt).toFixed(3)}`;
+    y = pdfEnsureSpace(doc, y, 10);
+    y = pdfAddWrappedLine(doc, line, 12, y, 185, 4.5);
+    y += 1;
+  });
+
+  doc.save("energy_report_detailed.pdf");
+}
+
+async function emailReport() {
+  await fetch(API + "/send_report", { method: "POST" });
+  alert("Email report triggered");
+}
+
+async function updateThresholds() {
+  const payload = {
+    fan: +document.getElementById("fan").value,
+    ac: +document.getElementById("ac").value,
+    laptop: +document.getElementById("laptop").value,
+    tube_light: +document.getElementById("tube_light").value,
+    mobile_charger: +document.getElementById("mobile_charger").value
+  };
+
+  await fetch(API + "/update_thresholds", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  await loadThresholds();
+  alert("Thresholds updated");
+  reloadVisibleSections();
+}
+
+async function loadAdvancedML() {
+  const res = await fetch(API + "/advanced_ml_per_appliance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      budget_1h: +document.getElementById("budget1h").value,
+      budget_24h: +document.getElementById("budget24h").value
+    })
+  });
+
+  const raw = await res.json();
+  advancedMLData = applyRoomFilter(raw);
+
+  renderML(advancedMLData);
+}
+
+function renderML(data) {
+  let insightsHtml = "";
+  data.forEach(r => {
+    insightsHtml += `<div class="insight-box"><strong>${r.room_id}:</strong> ${r.insight || "-"}</div>`;
+  });
+  document.getElementById("mlInsightsContainer").innerHTML = insightsHtml || "";
+
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Appliance</th>
+      <th>Pred 1h (kWh)</th>
+      <th>Pred 24h (kWh)</th>
+      <th>P>Th 1h</th>
+      <th>P>Th 24h</th>
+      <th>Total 1h (kWh)</th>
+      <th>Total 24h (kWh)</th>
+      <th>Cost 1h (₹)</th>
+      <th>Cost 24h (₹)</th>
+      <th>P>Budget 1h</th>
+      <th>P>Budget 24h</th>
+      <th>Budget Use 1h</th>
+      <th>Budget Use 24h</th>
+      <th>Budget Left 1h</th>
+      <th>Budget Left 24h</th>
+    </tr>
+  `;
+
+  const labels = [];
+  const values = [];
+
+  const budget1h = +document.getElementById("budget1h").value || 0;
+  const budget24h = +document.getElementById("budget24h").value || 0;
+
+  data.forEach(r => {
+    Object.keys(r.appliances || {}).forEach(app => {
+      const a = r.appliances[app];
+      const t = r.total || {};
+
+      const cost1h = num(t.cost_1h);
+      const cost24h = num(t.cost_24h);
+      const util1h = budget1h > 0 ? (cost1h / budget1h) * 100 : 0;
+      const util24h = budget24h > 0 ? (cost24h / budget24h) * 100 : 0;
+      const left1h = budget1h - cost1h;
+      const left24h = budget24h - cost24h;
+
+      html += `
+        <tr>
+          <td>${r.room_id}</td>
+          <td>${app}</td>
+          <td>${num(a.pred_1h).toFixed(3)}</td>
+          <td>${num(a.pred_24h).toFixed(3)}</td>
+          <td class="${riskClass(a.prob_exceed_1h)}">${formatProb(a.prob_exceed_1h)}</td>
+          <td class="${riskClass(a.prob_exceed_24h)}">${formatProb(a.prob_exceed_24h)}</td>
+          <td>${num(t.pred_1h).toFixed(3)}</td>
+          <td>${num(t.pred_24h).toFixed(3)}</td>
+          <td>₹ ${cost1h.toFixed(2)}</td>
+          <td>₹ ${cost24h.toFixed(2)}</td>
+          <td class="${riskClass(t.prob_budget_1h)}">${formatProb(t.prob_budget_1h)}</td>
+          <td class="${riskClass(t.prob_budget_24h)}">${formatProb(t.prob_budget_24h)}</td>
+          <td>${util1h.toFixed(2)}%</td>
+          <td>${util24h.toFixed(2)}%</td>
+          <td>₹ ${left1h.toFixed(2)}</td>
+          <td>₹ ${left24h.toFixed(2)}</td>
+        </tr>
+      `;
+
+      labels.push(`${r.room_id}-${app}`);
+      values.push(num(a.pred_1h));
+    });
+  });
+
+  document.getElementById("mlTable").innerHTML = html;
+  renderMLChart(labels, values);
+}
+
+function renderMLChart(labels, values) {
+  if (mlPredictionChart) mlPredictionChart.destroy();
+
+  mlPredictionChart = new Chart(document.getElementById("mlPredictionChart"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "Predicted Appliance Usage (kWh - Next 1 Hour)", data: values }]
+    },
+    options: {
+      plugins: { title: { display: true, text: "Per Appliance Energy Prediction" } },
+      scales: {
+        x: { title: { display: true, text: "Room-Appliance" } },
+        y: { title: { display: true, text: "kWh" } }
+      }
+    }
+  });
+}
+
+function suggestionForAppliance(app, current, threshold, pred1h, prob1h) {
+  const ratio = threshold > 0 ? current / threshold : 0;
+
+  if (prob1h >= 0.8) {
+    if (app === "ac") return "Reduce AC runtime or raise thermostat by 1–2°C.";
+    if (app === "fan") return "Reduce fan speed during low occupancy or turn off when room is empty.";
+    if (app === "laptop") return "Enable battery saver and reduce charging duration.";
+    if (app === "tube_light") return "Switch off unused lights and consider efficient LED fixtures.";
+    if (app === "mobile_charger") return "Unplug chargers when idle to avoid idle draw.";
+  }
+
+  if (ratio >= 1) {
+    if (app === "ac") return "Current AC usage is above threshold. Inspect cooling settings and occupancy timing.";
+    if (app === "fan") return "Fan usage is above threshold. Review unnecessary continuous use.";
+    if (app === "laptop") return "Laptop usage is above threshold. Reduce background load or charging duration.";
+    if (app === "tube_light") return "Lighting usage is above threshold. Consider more efficient fixtures.";
+    if (app === "mobile_charger") return "Charging usage is above threshold. Check idle chargers.";
+  }
+
+  if (prob1h >= 0.5 || pred1h > threshold * 0.9) {
+    return "Usage is trending close to threshold. Monitor for the next hour.";
+  }
+
+  return "Operating within efficient range.";
+}
+
+function roomLevelSuggestion(totalNow, totalPred1h, totalPred24h) {
+  if (totalPred24h > totalNow * 18) {
+    return "This room shows sustained projected high usage over 24 hours. Prioritize inspection.";
+  }
+  if (totalPred1h > totalNow * 1.15) {
+    return "Next-hour usage is likely to rise. Review currently active appliances.";
+  }
+  return "Room usage pattern appears stable.";
+}
+
+async function loadSuggestions() {
+  const [usageRes, mlRes] = await Promise.all([
+    fetch(API + "/get_room_usage"),
+    fetch(API + "/advanced_ml_per_appliance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        budget_1h: +document.getElementById("budget1h").value || 50,
+        budget_24h: +document.getElementById("budget24h").value || 1000
+      })
+    })
+  ]);
+
+  let usageData = await usageRes.json();
+  let mlData = await mlRes.json();
+
+  usageData = applyRoomFilter(usageData);
+
+  const mlMap = {};
+  mlData.forEach(r => mlMap[r.room_id] = r);
+
+  let html = `
+    <tr>
+      <th>Room</th>
+      <th>Appliance</th>
+      <th>Current (kWh)</th>
+      <th>Threshold (kWh)</th>
+      <th>Pred 1h (kWh)</th>
+      <th>Risk 1h</th>
+      <th>Suggestion</th>
+    </tr>
+  `;
+
+  usageData.forEach(room => {
+    const mlRoom = mlMap[room.room_id] || {};
+    const apps = [
+      ["fan", room.fan_watt, room.fan_threshold || thresholds.fan],
+      ["ac", room.ac_watt, room.ac_threshold || thresholds.ac],
+      ["laptop", room.laptop_watt, room.laptop_threshold || thresholds.laptop],
+      ["tube_light", room.tube_light_watt, room.tube_light_threshold || thresholds.tube_light],
+      ["mobile_charger", room.mobile_charger_watt, room.mobile_charger_threshold || thresholds.mobile_charger]
+    ];
+
+    apps.forEach(([app, current, threshold]) => {
+      const pred1h = mlRoom?.appliances?.[app]?.pred_1h ?? current;
+      const prob1h = mlRoom?.appliances?.[app]?.prob_exceed_1h ?? 0;
+
+      html += `
+        <tr>
+          <td>${room.room_id}</td>
+          <td>${app}</td>
+          <td>${num(current).toFixed(3)}</td>
+          <td>${num(threshold).toFixed(3)}</td>
+          <td>${num(pred1h).toFixed(3)}</td>
+          <td class="${riskClass(prob1h)}">${formatProb(prob1h)}</td>
+          <td>${suggestionForAppliance(app, num(current), num(threshold), num(pred1h), num(prob1h))}</td>
+        </tr>
+      `;
+    });
+
+    const totalNow = num(room.total_watt);
+    const totalPred1h = num(mlRoom?.total?.pred_1h ?? totalNow);
+    const totalPred24h = num(mlRoom?.total?.pred_24h ?? totalNow * 24);
+
+    html += `
+      <tr>
+        <td><b>${room.room_id}</b></td>
+        <td><b>room_total</b></td>
+        <td><b>${totalNow.toFixed(3)}</b></td>
+        <td>-</td>
+        <td><b>${totalPred1h.toFixed(3)}</b></td>
+        <td>-</td>
+        <td><b>${roomLevelSuggestion(totalNow, totalPred1h, totalPred24h)}</b></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("suggestTable").innerHTML = html;
+}
+
+function toggleAutoRefresh() {
+  autoRefreshOn = !autoRefreshOn;
+  const btn = document.getElementById("autoRefreshBtn");
+
+  if (autoRefreshOn) {
+    autoRefreshTimer = setInterval(reloadVisibleSections, 60000);
+    btn.innerText = "Auto Refresh ON";
+  } else {
+    clearInterval(autoRefreshTimer);
+    btn.innerText = "Auto Refresh OFF";
+  }
+}
+
+async function reloadVisibleSections() {
+  await loadAllData();
+  await loadLogs();
+  await loadBilling();
+  await loadAlerts();
+
+  if (!document.getElementById("mlSection").classList.contains("hidden")) {
+    await loadAdvancedML();
+  }
+  if (!document.getElementById("suggestionsSection").classList.contains("hidden")) {
+    await loadSuggestions();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const budget1 = document.getElementById("budget1h");
+  const budget24 = document.getElementById("budget24h");
+
+  if (budget1) {
+    budget1.addEventListener("change", () => {
+      if (!document.getElementById("mlSection").classList.contains("hidden")) {
+        loadAdvancedML();
+      }
+    });
+  }
+
+  if (budget24) {
+    budget24.addEventListener("change", () => {
+      if (!document.getElementById("mlSection").classList.contains("hidden")) {
+        loadAdvancedML();
+      }
+    });
+  }
+});
+
+loadAllData();
+loadLogs();
+loadBilling();
+loadAlerts();
+</script>
+</body>
+</html>
